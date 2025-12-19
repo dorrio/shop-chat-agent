@@ -8,7 +8,7 @@ export const AppConfig = {
   api: {
     defaultModel: 'claude-3-5-sonnet-latest',
     maxTokens: 2000,
-    defaultPromptType: 'standardAssistant',
+    defaultPromptType: 'striker',
   },
 
   // Error Message Templates
