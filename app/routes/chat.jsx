@@ -8,6 +8,7 @@ import AppConfig from "../services/config.server";
 import { createSseStream } from "../services/streaming.server";
 import { createClaudeService } from "../services/claude.server";
 import { createToolService } from "../services/tool.server";
+import StrikerService from "../services/striker.server";
 
 
 /**
@@ -152,6 +153,9 @@ async function handleChatSession({
       console.warn('Failed to connect to MCP servers, continuing without tools:', error.message);
     }
 
+    // Inject Striker Tool
+    mcpClient.tools.push(...StrikerService.getToolDefinitions());
+
     // Prepare conversation state
     let conversationHistory = [];
     let productsToDisplay = [];
@@ -225,7 +229,30 @@ async function handleChatSession({
             });
 
             // Call the tool
-            const toolUseResponse = await mcpClient.callTool(toolName, toolArgs);
+            let toolUseResponse;
+            const strikerTools = StrikerService.getToolDefinitions();
+            const strikerTool = strikerTools.find(t => t.name === toolName);
+
+            if (strikerTool) {
+              try {
+                if (toolName === "search_mock_jerseys") {
+                   toolUseResponse = await StrikerService.searchJerseys(toolArgs);
+                } else if (toolName === "get_player_list") {
+                   toolUseResponse = await StrikerService.getPlayerList(toolArgs);
+                } else if (toolName === "add_customized_jersey_to_cart") {
+                   toolUseResponse = await StrikerService.addCustomizedJerseyToCart(toolArgs);
+                }
+              } catch (error) {
+                toolUseResponse = {
+                  error: {
+                    type: "internal_error",
+                    data: error.message
+                  }
+                };
+              }
+            } else {
+              toolUseResponse = await mcpClient.callTool(toolName, toolArgs);
+            }
 
             // Handle tool response based on success/error
             if (toolUseResponse.error) {
